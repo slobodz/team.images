@@ -15,15 +15,15 @@ from PIL import Image
 from resizeimage import resizeimage
 from datetime import datetime
 import json
-import logging
 import argparse
 from shutil import copy2, move
-sys.path.append(r'..\project\api')
-from request import token_refresh
 
+from team.datasync.api.request import token_refresh
+from team.images import logging
 from team.images import app_config
 from team.images.entity.model import TeamImage
-from team.images.service.utils import exif_tuple_2_str, exif_str_2_tuple, list_to_str, rreplace, get_column_descriptions
+from team.images.service.utils import exif_tuple_2_str, \
+    exif_str_2_tuple, list_to_str, rreplace, get_column_descriptions
 
 
 '''
@@ -105,66 +105,66 @@ def process_exif(image_path):
 
 def check_folder_structure(process_id):
     folders_ok = True
-    if not os.path.exists(PARENT_FOLDER):
-        logging.error("Image directory does not exists: '{0}'".format(PARENT_FOLDER))
+    if not os.path.exists(app_config.PARENT_FOLDER):
+        logging.error("Image directory does not exists: '{0}'".format(app_config.PARENT_FOLDER))
         folders_ok = False
     else:
-        if not os.path.isdir(PARENT_FOLDER):
-            logging.error("Image directory path: '{0}' is not valid.".format(PARENT_FOLDER))
+        if not os.path.isdir(app_config.PARENT_FOLDER):
+            logging.error("Image directory path: '{0}' is not valid.".format(app_config.PARENT_FOLDER))
             folders_ok = False
 
     if folders_ok:
         try:
-            if not os.path.isdir(IMAGE_ERROR_FOLDER):
-                os.makedirs(IMAGE_ERROR_FOLDER)
+            if not os.path.isdir(app_config.IMAGE_ERROR_FOLDER):
+                os.makedirs(app_config.IMAGE_ERROR_FOLDER)
             if not os.path.isdir(IMAGE_CURRENT_ERROR_FOLDER):    
                 os.makedirs(IMAGE_CURRENT_ERROR_FOLDER)
-            if not os.path.isdir(IMAGE_UNPROCESSED_ERROR_FOLDER): 
-                os.makedirs(IMAGE_UNPROCESSED_ERROR_FOLDER)
-            if not os.path.isdir(IMAGE_LOG_FOLDER):
-                os.makedirs(IMAGE_LOG_FOLDER)
-            if not os.path.isdir(IMAGE_PROCESSED_FOLDER):
-                os.makedirs(IMAGE_PROCESSED_FOLDER)
-            if not os.path.isdir(IMAGE_THUMBNAIL_FOLDER):
-                os.makedirs(IMAGE_THUMBNAIL_FOLDER)
-            if not os.path.isdir(IMAGE_UNPROCESSED_FOLDER):
-                os.makedirs(IMAGE_UNPROCESSED_FOLDER)
+            if not os.path.isdir(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER): 
+                os.makedirs(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER)
+            if not os.path.isdir(app_config.IMAGE_LOG_FOLDER):
+                os.makedirs(app_config.IMAGE_LOG_FOLDER)
+            if not os.path.isdir(app_config.IMAGE_PROCESSED_FOLDER):
+                os.makedirs(app_config.IMAGE_PROCESSED_FOLDER)
+            if not os.path.isdir(app_config.IMAGE_THUMBNAIL_FOLDER):
+                os.makedirs(app_config.IMAGE_THUMBNAIL_FOLDER)
+            if not os.path.isdir(app_config.IMAGE_UNPROCESSED_FOLDER):
+                os.makedirs(app_config.IMAGE_UNPROCESSED_FOLDER)
         except Exception as ex:
             logging.error("Exception occured while creating flder structure. Error description: '{0}'".format(repr(ex)))
             folders_ok = False
     
     if folders_ok:
         #move all items from parent to unprocessed/errors folder
-        for filename in os.listdir(PARENT_FOLDER):
+        for filename in os.listdir(app_config.PARENT_FOLDER):
             try:
-                if os.path.join(PARENT_FOLDER, filename) not in [IMAGE_ERROR_FOLDER, IMAGE_LOG_FOLDER, IMAGE_PROCESSED_FOLDER, IMAGE_THUMBNAIL_FOLDER, IMAGE_UNPROCESSED_FOLDER]:
-                    if os.path.isfile(os.path.join(PARENT_FOLDER, filename)):
-                        if os.path.splitext(filename)[-1].lower() in ALLOWED_EXTENSIONS:
-                            if os.path.isfile(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)):
-                                move(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename))
-                                logging.warning("File: '{0}' already exists in unprocessed folder and has been moved to destination '{1}'. Object will not be processed.".format(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename)))
+                if os.path.join(app_config.PARENT_FOLDER, filename) not in [app_config.IMAGE_ERROR_FOLDER, app_config.IMAGE_LOG_FOLDER, app_config.IMAGE_PROCESSED_FOLDER, app_config.IMAGE_THUMBNAIL_FOLDER, app_config.IMAGE_UNPROCESSED_FOLDER]:
+                    if os.path.isfile(os.path.join(app_config.PARENT_FOLDER, filename)):
+                        if os.path.splitext(filename)[-1].lower() in app_config.ALLOWED_EXTENSIONS:
+                            if os.path.isfile(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)):
+                                move(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename))
+                                logging.warning("File: '{0}' already exists in unprocessed folder and has been moved to destination '{1}'. Object will not be processed.".format(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename)))
                             else:
-                                move(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_UNPROCESSED_FOLDER, filename))
-                                logging.info("File: '{0}' was moved to location '{1}'".format(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)))
+                                move(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename))
+                                logging.info("File: '{0}' was moved to location '{1}'".format(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
                         else:
-                            move(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename))
-                            logging.warning("File: '{0}' has not allowed extension: '{1}' and has been moved to destination '{2}'. Object will not be processed.".format(os.path.join(PARENT_FOLDER, filename), os.path.splitext(filename)[-1].lower(), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename)))
-                    elif os.path.isdir(os.path.join(PARENT_FOLDER, filename)):
-                        move(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename))
-                        logging.warning("Item: '{0}' is a directory, which is not expected in this location and it was moved to destination: '{1}'. Object will not be processed.".format(os.path.join(PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename)))
+                            move(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename))
+                            logging.warning("File: '{0}' has not allowed extension: '{1}' and has been moved to destination '{2}'. Object will not be processed.".format(os.path.join(app_config.PARENT_FOLDER, filename), os.path.splitext(filename)[-1].lower(), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename)))
+                    elif os.path.isdir(os.path.join(app_config.PARENT_FOLDER, filename)):
+                        move(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename))
+                        logging.warning("Item: '{0}' is a directory, which is not expected in this location and it was moved to destination: '{1}'. Object will not be processed.".format(os.path.join(app_config.PARENT_FOLDER, filename), os.path.join(IMAGE_CURRENT_ERROR_FOLDER, filename)))
             except PermissionError as ex:
-                logging.error("Unable to move item: '{0}' to destination location. Item is opened in another process or current user does not have permission to move it. System error description: '{1}'".format(os.path.join(PARENT_FOLDER, filename), repr(ex)))
+                logging.error("Unable to move item: '{0}' to destination location. Item is opened in another process or current user does not have permission to move it. System error description: '{1}'".format(os.path.join(app_config.PARENT_FOLDER, filename), repr(ex)))
                 folders_ok = False
             except Exception as ex:
-                logging.error("Exception occured while moving object: '{0}'. System error description: '{1}'".format(os.path.join(PARENT_FOLDER, filename), repr(ex)))
+                logging.error("Exception occured while moving object: '{0}'. System error description: '{1}'".format(os.path.join(app_config.PARENT_FOLDER, filename), repr(ex)))
                 folders_ok = False
             except:
-                logging.error("Unspecified error occured while moving object: '{0}'").format(os.path.join(PARENT_FOLDER, filename))
+                logging.error("Unspecified error occured while moving object: '{0}'").format(os.path.join(app_config.PARENT_FOLDER, filename))
                 folders_ok = False
     return folders_ok
 
 #========================================================= SCRIPT =========================================================#
-if __name__ == "__main__":
+def full_refresh():
     process_id = datetime.now().strftime("%Y-%m-%d_%H.%M.%S.%f") #get process timestamp/id
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("-ll", "--loglevel", choices=['debug','info','warning','error','critical'], default='warning', required=False, help="Information type captured in log file")
@@ -185,14 +185,14 @@ if __name__ == "__main__":
 
     FILENAME_FILTER = args["filenamefilter"]
 
-    logging.basicConfig(handlers=[logging.FileHandler(filename=os.path.join(IMAGE_LOG_FOLDER, process_id + '.log'), encoding='utf-8')], \
+    logging.basicConfig(handlers=[logging.FileHandler(filename=os.path.join(app_config.IMAGE_LOG_FOLDER, process_id + '.log'), encoding='utf-8')], \
                         format='%(asctime)s:%(levelname)s:%(message)s', level=loglevel) #, level=logging.INFO - default is WARNING
-    logging.info("TeamImage process [{0}] version: '{1}'".format(process_id, VERSION))
-    IMAGE_CURRENT_ERROR_FOLDER = os.path.join(IMAGE_ERROR_FOLDER, process_id)
-    IMAGE_UNPROCESSED_ERROR_FOLDER = os.path.join(IMAGE_CURRENT_ERROR_FOLDER, IMAGE_UNPROCESSED_FOLDER.rsplit('\\', 1)[1])
+    logging.info("TeamImage process [{0}] version: '{1}'".format(process_id, app_config.VERSION))
+    IMAGE_CURRENT_ERROR_FOLDER = os.path.join(app_config.IMAGE_ERROR_FOLDER, process_id)
+    IMAGE_UNPROCESSED_ERROR_FOLDER = os.path.join(IMAGE_CURRENT_ERROR_FOLDER, app_config.IMAGE_UNPROCESSED_FOLDER.rsplit('\\', 1)[1])
 
     if check_folder_structure(process_id) == False:
-        logging.critical("Error occured while validating folder structure inside directory: '{0}'".format(PARENT_FOLDER))
+        logging.critical("Error occured while validating folder structure inside directory: '{0}'".format(app_config.PARENT_FOLDER))
         exit(1)
 
     sql_driver = ""
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         logging.critical("Unsupported system type: '{0}'".format(sys.platform))
         exit(1)
 
-    ConnectionString = SQL_CONNECTION_STRING_TEMPLATE.replace('%SQL_SERVER%', os.getenv('APP_SETTINGS_TEAM_SERVER'))
+    ConnectionString = app_config.SQL_CONNECTION_STRING_TEMPLATE.replace('%SQL_SERVER%', os.getenv('APP_SETTINGS_TEAM_SERVER'))
     ConnectionString = ConnectionString.replace('%SQL_DRIVER%', sql_driver)
     ConnectionString = ConnectionString.replace('%SQL_DATABASE%', os.getenv('APP_SETTINGS_TEAM_DATABASE'))
     ConnectionString = ConnectionString.replace('%SQL_LOGIN%', os.getenv('APP_SETTINGS_TEAM_USER'))
@@ -223,30 +223,30 @@ if __name__ == "__main__":
     if len(FILENAME_FILTER) > 0:
         logging.warning("File name filter is applied for this run: '{0}'".format(FILENAME_FILTER))
 
-    onlyfiles = os.listdir(IMAGE_UNPROCESSED_FOLDER)
+    onlyfiles = os.listdir(app_config.IMAGE_UNPROCESSED_FOLDER)
     for filename in onlyfiles:
-        if os.path.isfile(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)):
-            if os.path.splitext(filename)[-1].lower() in ALLOWED_EXTENSIONS:
+        if os.path.isfile(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)):
+            if os.path.splitext(filename)[-1].lower() in app_config.ALLOWED_EXTENSIONS:
                 if filename.find(FILENAME_FILTER) >= 0 or len(FILENAME_FILTER.strip()) == 0:
                     team_image = None
                     try:
-                        logging.info("Processing file: '{0}'".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)))
-                        team_image = TeamImage(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), process_id)
+                        logging.info("Processing file: '{0}'".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
+                        team_image = TeamImage(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), process_id)
                         logging.info(team_image)
                         #process_exif(os.path.join(IMAGE_FOLDER, filename))
                     except UnicodeEncodeError as ex:
-                        logging.error("UnicodeEncodeError captured while processing file: '{0}' Message: {1}".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), repr(ex)))
+                        logging.error("UnicodeEncodeError captured while processing file: '{0}' Message: {1}".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), repr(ex)))
                     except Exception as ex:
-                        logging.error("Exception captured while processing file: '{0}' Message: {1}".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), repr(ex)))
+                        logging.error("Exception captured while processing file: '{0}' Message: {1}".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), repr(ex)))
 
                     if UPLOAD_FILES == False:
                         logging.warning("Process is set NOT to upload images. UPLOAD_FILES variable is expected to be True.")
                     elif team_image is None:
-                        logging.error("File: '{0}' was not processed correctly.".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)))
+                        logging.error("File: '{0}' was not processed correctly.".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
                     elif team_image.product_code_from_db is None or len(team_image.product_code_from_db) == 0:
-                        logging.error("File: '{0}' was processed but product code was not found in data set".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)))
+                        logging.error("File: '{0}' was processed but product code was not found in data set".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
                     elif len(team_image.errors) > 0:
-                        logging.error("File: '{0}' was processed with errors: '{1}'".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), list_to_str(team_image.errors)))
+                        logging.error("File: '{0}' was processed with errors: '{1}'".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), list_to_str(team_image.errors)))
                     else:
                         #send post with metadata
                         list_of_items = []
@@ -302,8 +302,8 @@ if __name__ == "__main__":
                         tile_data["tile_file_name"] = ""
                         tile_data["file_size"] = str(os.path.getsize(team_image.thumbnail_filepath))
                         tile_data["mime"] = "png"
-                        tile_data["width"] = int(team_image.metadata_image_width * (THUMBNAIL_HEIGHT/team_image.metadata_image_height))
-                        tile_data["height"] = THUMBNAIL_HEIGHT
+                        tile_data["width"] = int(team_image.metadata_image_width * (app_config.THUMBNAIL_HEIGHT/team_image.metadata_image_height))
+                        tile_data["height"] = app_config.THUMBNAIL_HEIGHT
                         tile_data["category"] = 'tile'
                         if team_image.logo_removed:
                             tile_data["no_logo"] = "Y"
@@ -333,7 +333,7 @@ if __name__ == "__main__":
                         json_data = json.dumps(items)
 
                         token = token_refresh()
-                        url0 = APP_URL + FILE_UPLOAD_ENDPOINT
+                        url0 = app_config.APP_URL + app_config.FILE_UPLOAD_ENDPOINT
                         headers = {"Token": token, "Content-Type": "application/json"}
                         try:
                             r = requests.post(url0, headers=headers, data=json_data)#json=json_data
@@ -352,7 +352,7 @@ if __name__ == "__main__":
                             logging.error("Exception was captured while sending file's: '{0}' metadata to server. Message {1}".format(team_image.new_filename, repr(re)))
                             continue
                         
-                        url1 = APP_URL + FILE_UPLOAD_ENDPOINT + team_image.new_filename
+                        url1 = app_config.APP_URL + app_config.FILE_UPLOAD_ENDPOINT + team_image.new_filename
                         fin = open(team_image.processed_filepath, 'rb')
                         files = {'product_image': fin}
                         try:
@@ -378,7 +378,7 @@ if __name__ == "__main__":
                         
                         tile_file = None
                         try:
-                            url2 = APP_URL + FILE_UPLOAD_ENDPOINT + team_image.new_thumbnail_filename
+                            url2 = app_config.APP_URL + app_config.FILE_UPLOAD_ENDPOINT + team_image.new_thumbnail_filename
                             tile_file = open(team_image.thumbnail_filepath, 'rb')
                             files = {'product_image': tile_file}
                             r = requests.put(url2, headers={'Token' : token}, files=files)
@@ -400,13 +400,16 @@ if __name__ == "__main__":
                         finally:
                             tile_file.close()
             else:
-                move(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), os.path.join(IMAGE_UNPROCESSED_ERROR_FOLDER, filename))
-                logging.warning("File: '{0}' has not allowed extension: '{1}' and has been moved to destination '{2}'. Object will not be processed.".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), os.path.splitext(filename)[-1].lower(), os.path.join(IMAGE_UNPROCESSED_ERROR_FOLDER, filename)))
-        if os.path.isdir(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename)):
-            logging.warning("Item: '{0}' is a directory, which is not expected in this location and it was moved to destination: '{1}'. Object will not be processed.".format(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), os.path.join(IMAGE_UNPROCESSED_ERROR_FOLDER, filename)))
-            move(os.path.join(IMAGE_UNPROCESSED_FOLDER, filename), os.path.join(IMAGE_UNPROCESSED_ERROR_FOLDER, filename))
+                move(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), os.path.join(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER, filename))
+                logging.warning("File: '{0}' has not allowed extension: '{1}' and has been moved to destination '{2}'. Object will not be processed.".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), os.path.splitext(filename)[-1].lower(), os.path.join(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER, filename)))
+        if os.path.isdir(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)):
+            logging.warning("Item: '{0}' is a directory, which is not expected in this location and it was moved to destination: '{1}'. Object will not be processed.".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), os.path.join(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER, filename)))
+            move(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), os.path.join(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER, filename))
 
     if SQL_CONNECTION is not None:
         if SQL_CURSOR is not None:
             SQL_CURSOR.close()
         SQL_CONNECTION.close()
+
+if __name__ == "__main__":
+    full_refresh()

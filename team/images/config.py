@@ -10,17 +10,9 @@ class Config:
     CSV_SEPARATOR = ","
     EXIF_TAG_SEPARATOR = "|"
     ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png']
-    PARENT_FOLDER = os.getenv('APP_IMAGE_FOLDER')
     FILE_UPLOAD_ENDPOINT = 'api/product/attachment/'
     UPLOAD_FILES = True
-
-    IMAGE_UNPROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'unprocessed')
-    IMAGE_PROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'processed')
-    IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
-    IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
-    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')
     IMAGE_CURRENT_ERROR_FOLDER = None
-
     PROCESS_TEMPLATES = True
     CORRELATION_TRESHOLD = 0.330 #no logo recognized below this level
     TEMPLATES = ['template_kalorik_h95_vertical.jpg', 'template_kalorik_w95_horizontal.jpg',
@@ -45,9 +37,15 @@ class DevelopmentConfig(Config):
     APP_URL = 'http://127.0.0.1:5000/'
     TEAM_SERVER = 'localhost'
     TEAM_DATABASE = 'TeamExport'
-    TEAM_USER = 'test'
-    TEAM_PWD = 'test'
+    TEAM_USER = 'teampolska'
+    TEAM_PWD = 'teampolska'
     LOG_LOCATION = 'C:\Project\TeamAssets\deploy\Logs'
+    PARENT_FOLDER = 'C:\Project\TeamAssets\deploy\Pictures' 
+    IMAGE_UNPROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'unprocessed')
+    IMAGE_PROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'processed')
+    IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
+    IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
+    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')    
 
 class TestConfig(Config):
     """Development slawek configuration."""
@@ -60,6 +58,12 @@ class TestConfig(Config):
     TEAM_USER = 'teampolska'
     TEAM_PWD = 'teampolska'
     LOG_LOCATION = 'C:\Project\TeamAssets\deploy\Logs'
+    PARENT_FOLDER = 'C:\Project\TeamAssets\deploy\Pictures'       
+    IMAGE_UNPROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'unprocessed')
+    IMAGE_PROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'processed')
+    IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
+    IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
+    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')    
 
 class ProductionConfig(Config):
     """Development slawek configuration."""
@@ -72,6 +76,12 @@ class ProductionConfig(Config):
     TEAM_USER = os.getenv('APP_SETTINGS_TEAM_USER')
     TEAM_PWD = os.getenv('APP_SETTINGS_TEAM_PWD')
     LOG_LOCATION = os.getenv('APP_SETTINGS_LOG_LOCATION')
+    PARENT_FOLDER = 'C:\Project\TeamAssets\deploy\Pictures'       
+    IMAGE_UNPROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'unprocessed')
+    IMAGE_PROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'processed')
+    IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
+    IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
+    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')    
 
     
 

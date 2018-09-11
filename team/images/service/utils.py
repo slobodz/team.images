@@ -1,8 +1,9 @@
-import pyodbc
-import os
-from team.datasync import app_config, logging
+# team.images.utils.py
+from team.datasync import app_config
 
 def get_column_descriptions():
+    STR_SEPARATOR = app_config.STR_SEPARATOR
+      
     return 'file_name' + STR_SEPARATOR\
         + 'file_size' + STR_SEPARATOR\
         + 'metadata_image_format' + STR_SEPARATOR\

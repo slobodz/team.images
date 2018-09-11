@@ -1,7 +1,7 @@
 import os
 import logging
 import datetime
-from team.datasync import config
+from team.images import config
 
 #config
 app_config = None
@@ -18,5 +18,5 @@ else:
 
 #logging
 LOG_LOCATION = app_config.LOG_LOCATION
-logging.basicConfig(filename=LOG_LOCATION + 'imagerefresh' + datetime.datetime.today().strftime('%Y%m%d%H%M%S') + '.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join(LOG_LOCATION, 'imagerefresh' + datetime.datetime.today().strftime('%Y%m%d%H%M%S') + '.log'), format='%(asctime)s %(message)s', level=logging.DEBUG)
     

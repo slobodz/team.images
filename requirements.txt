@@ -1,2 +1,9 @@
-requests==2.18.4
+requests==2.19.1
 pyodbc==4.0.23
+numpy
+opencv-python
+imutils
+piexif
+Pillow
+python-resize-image
+nose

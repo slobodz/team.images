@@ -32,16 +32,17 @@ def get_version(version_tuple):
 VERSION_TUPLE =  eval(version_line.split('=')[-1])
 
 setup(
-    name = "team.datasync",
+    name = "team.images",
     version = get_version(VERSION_TUPLE),
     author = "Wojtek Jakubas",
-    author_email = "andrewjcarter@gmail.com",
+    author_email = "@gmail.com",
     description = ("Images push to TeamServices module"),
+    scripts=['bin/run-team.images.py'],    
     license = "BSD",
     keywords = "example documentation tutorial",
     url = "http://packages.python.org/team.datasync",
     install_requires=reqs('requirements.txt'),
-    packages=['team.datasync','team.datasync.api','team.datasync.service','team.datasync.entity'],
+    packages=['team.images','team.images.entity','team.images.service','team.images.templates'],
     namespace_packages=['team'],
     long_description=read('README.md'),
     classifiers=[
