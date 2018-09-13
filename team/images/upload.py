@@ -32,7 +32,6 @@ TO DO:
 FILENAME_FILTER = None
 IMAGE_CURRENT_ERROR_FOLDER = None
 IMAGE_UNPROCESSED_ERROR_FOLDER = None
-SQL_CURSOR = None
 
 def process_exif(image_path):
     image_file = Image.open(image_path)
@@ -159,48 +158,47 @@ def check_folder_structure(process_id):
                 folders_ok = False
     return folders_ok
 
-    def find_product_code_in_db(team_image, strict_level):
-        global SQL_CURSOR
-        rowcount = 0
-        for product_code in team_image.product_codes:
-            product_code_for_like = product_code.replace("'", "''").replace("%", "[%]").replace("_", "[_]")
-            sql = ""
-            #sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product]"
-            #sql = "SELECT [ID],[Guid],[Kod],[Nazwa],[NumerKatalogowy] FROM [TEAM].[dbo].[Towary] WHERE Kod LIKE '" + product_code_for_like + "%'"
-            if strict_level == 1:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] = '" + product_code.replace("'", "''") + "'"
-            elif strict_level == 2:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '" + product_code_for_like + "%'"
-            elif strict_level == 3:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '%" + product_code_for_like + "%'"
-            elif strict_level == 4:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE REPLACE([product_code],'/','-') LIKE '%" + product_code_for_like + "%'"
+def find_product_code_in_db(team_image, strict_level, SQL_CURSOR):
+    rowcount = 0
+    for product_code in team_image.possible_product_codes:
+        product_code_for_like = product_code.replace("'", "''").replace("%", "[%]").replace("_", "[_]")
+        sql = ""
+        #sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product]"
+        #sql = "SELECT [ID],[Guid],[Kod],[Nazwa],[NumerKatalogowy] FROM [TEAM].[dbo].[Towary] WHERE Kod LIKE '" + product_code_for_like + "%'"
+        if strict_level == 1:
+            sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] = '" + product_code.replace("'", "''") + "'"
+        elif strict_level == 2:
+            sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '" + product_code_for_like + "%'"
+        elif strict_level == 3:
+            sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '%" + product_code_for_like + "%'"
+        elif strict_level == 4:
+            sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE REPLACE([product_code],'/','-') LIKE '%" + product_code_for_like + "%'"
 
-            SQL_CURSOR.execute(sql)
+        SQL_CURSOR.execute(sql)
+        row = SQL_CURSOR.fetchone()
+        while row:
+            rowcount = rowcount + 1
+            if rowcount == 1:
+                team_image.product_code_from_db = row[1].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding)
+            try:
+                team_image.products_from_db.append(
+                    str(row[0])+'~"' + row[1]+'"~"'
+                    + row[2].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding).replace('"', '""')+'"')
+            except UnicodeDecodeError as ex:
+                logging.error("Error occured while converting product description with code: '{0}'. Error description: '{1}'".format(row[1], repr(ex)))
+            #title.encode('utf-8', 'ignore').decode(sys.stdout.encoding)
+            #title = title.encode('utf8').decode('utf8')
+            #break
             row = SQL_CURSOR.fetchone()
-            while row:
-                rowcount = rowcount + 1
-                if rowcount == 1:
-                    team_image.product_code_from_db = row[1].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding)
-                try:
-                    team_image.products_from_db.append(
-                        str(row[0])+'~"' + row[1]+'"~"'
-                        + row[2].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding).replace('"', '""')+'"')
-                except UnicodeDecodeError as ex:
-                    logging.error("Error occured while converting product description with code: '{0}'. Error description: '{1}'".format(row[1], repr(ex)))
-                #title.encode('utf-8', 'ignore').decode(sys.stdout.encoding)
-                #title = title.encode('utf8').decode('utf8')
-                #break
-                row = SQL_CURSOR.fetchone()
-            if rowcount > 1:
-                team_image.errors.append('SQL: More than one [' + str(rowcount) + '] product returned for the code: [' + product_code + ']')
-            '''
-            if rowcount >= 4:
-                self.product_code_from_db = ''
-                self.products_from_db.clear()
-                self.errors.append('SQL: Too many records [' + str(rowcount) + '] returned for the code: [' + product_code + ']')
-            '''
-        return rowcount
+        if rowcount > 1:
+            team_image.errors.append('SQL: More than one [' + str(rowcount) + '] product returned for the code: [' + product_code + ']')
+        '''
+        if rowcount >= 4:
+            self.product_code_from_db = ''
+            self.products_from_db.clear()
+            self.errors.append('SQL: Too many records [' + str(rowcount) + '] returned for the code: [' + product_code + ']')
+        '''
+    return rowcount
 
 #========================================================= SCRIPT =========================================================#
 def full_refresh():
@@ -274,8 +272,8 @@ def full_refresh():
                     team_image = None
                     try:
                         logging.info("Processing file: '{0}'".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
-                        team_image = TeamImage(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), process_id, SQL_CURSOR)
-                        products_count = find_product_code_in_db(team_image, 1)
+                        team_image = TeamImage(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), process_id)
+                        products_count = find_product_code_in_db(team_image, 1, SQL_CURSOR)
                         team_image.preprocess_image(products_count)
                         logging.info(team_image)
                         #process_exif(os.path.join(IMAGE_FOLDER, filename))

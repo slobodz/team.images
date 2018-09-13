@@ -204,7 +204,7 @@ class TeamImage:
     def get_metadata_from_image_file(self):
         """Populate Image metadata from file"""
         try:
-            image_file = Image.open(self.image_path)
+            image_file = Image.open(self.file_path)
             self.metadata_image_format = image_file.format
             self.metadata_image_width, self.metadata_image_height = image_file.size
             self.metadata_image_dpi = DEFAULT_DPI
