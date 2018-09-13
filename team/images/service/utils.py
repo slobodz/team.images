@@ -1,5 +1,5 @@
 # team.images.utils.py
-from team.datasync import app_config
+from team.images import app_config
 
 def get_column_descriptions():
     STR_SEPARATOR = app_config.STR_SEPARATOR

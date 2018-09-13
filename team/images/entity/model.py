@@ -1,3 +1,12 @@
+import os
+import re
+import cv2
+import numpy as np
+import imutils
+from math import floor
+from resizeimage import resizeimage
+from PIL import Image
+
 from team.images import logging, app_config
 
 class TeamImage:
@@ -37,17 +46,17 @@ class TeamImage:
         self.processed_filepath = ''
         self.new_thumbnail_filename = ''
         self.thumbnail_filepath = ''
+       
+        self.get_metadata_from_image_file()
+        self.parse_file_name()         
 
-        self.get_metadata_from_image_file(self.file_path)
-        self.parse_file_name()
-
+    def preprocess_image(self, products_count):
         if len(self.metadata_image_format) > 0 and len(self.filename_image_type) > 0 and\
                 self.metadata_image_format != self.filename_image_type:
             self.errors.append('FIL: File extension "{0}" and file type "{1}" do not match'\
-                .format(self.filename_image_type, self.metadata_image_format))
+                .format(self.filename_image_type, self.metadata_image_format))        
 
         #check DB data
-        products_count = self.find_product_code_in_db(self.possible_product_codes, 1)
         if products_count == 1:
             if self.product_code_from_file_name.lower() != self.product_code_from_db.lower():
                 self.warnings.append('PCE: Product code from file does not match database product code')
@@ -64,12 +73,12 @@ class TeamImage:
             self.errors.append('PCE: Product code "{0}" was not found in database'\
                 .format(self.product_code_from_file_name))
 
-        if PROCESS_TEMPLATES:
-            for template in TEMPLATES:
+        if app_config.PROCESS_TEMPLATES:
+            for template in app_config.TEMPLATES:
                 correlation = 0.0
                 correlation = self.image_has_template(self.file_path, template)
                 #print('Correlation: {0} for template: {1}'.format(correlation, template))
-                if correlation >= CORRELATION_TRESHOLD:
+                if correlation >= app_config.CORRELATION_TRESHOLD:
                     #print('Correlation: {0} for template: {1}'.format(correlation, template))
                     self.logo_removed = False
                     break
@@ -91,8 +100,8 @@ class TeamImage:
 
         self.new_filename = self.create_filename()[0]
         self.new_thumbnail_filename = self.create_filename()[1]
-        self.processed_filepath = os.path.join(IMAGE_PROCESSED_FOLDER, self.new_filename)
-        self.thumbnail_filepath = os.path.join(IMAGE_THUMBNAIL_FOLDER, self.new_thumbnail_filename)
+        self.processed_filepath = os.path.join(app_config.IMAGE_PROCESSED_FOLDER, self.new_filename)
+        self.thumbnail_filepath = os.path.join(app_config.IMAGE_THUMBNAIL_FOLDER, self.new_thumbnail_filename)
 
         if len(self.errors) == 0:
             if os.path.isfile(self.processed_filepath):
@@ -107,8 +116,8 @@ class TeamImage:
                 except Exception as ex:
                     self.errors.append("Unable to move file: '{0}' to folder: '{1}'. Message: {2}".format(self.file_path, IMAGE_PROCESSED_FOLDER, repr(ex)))
 
-            if CREATE_THUMBNAILS is True:
-                self.create_thumbnail(self.processed_filepath, self.thumbnail_filepath)
+            if app_config.CREATE_THUMBNAILS is True:
+                self.create_thumbnail()
 
     def create_filename(self):
         """Create file name from attributes"""
@@ -125,7 +134,7 @@ class TeamImage:
                 new_filename += '_boxoffer'
             if self.filename_arranged:
                 new_filename += '_arranged'
-        if PROCESS_TEMPLATES:
+        if app_config.PROCESS_TEMPLATES:
             if self.logo_removed:
                 new_filename += '_L'
         else:
@@ -140,7 +149,7 @@ class TeamImage:
                 self.filename_image_sequence += 1
             new_filename += '_v' + str(self.filename_image_sequence).zfill(2)
         new_thumbnail_filename = new_filename
-        new_thumbnail_filename += '_Th' + str(THUMBNAIL_HEIGHT)
+        new_thumbnail_filename += '_Th' + str(app_config.THUMBNAIL_HEIGHT)
 
         if self.filename_attributes:
             attributes = ''
@@ -161,14 +170,15 @@ class TeamImage:
         else:
             new_filename += self.file_extension
 
-        if THUMBNAIL_FORMAT == 'JPEG':
+        if app_config.THUMBNAIL_FORMAT == 'JPEG':
             new_thumbnail_filename += '.jpg'
-        elif THUMBNAIL_FORMAT == 'PNG':
+        elif app_config.THUMBNAIL_FORMAT == 'PNG':
             new_thumbnail_filename += '.png'
 
         return (new_filename, new_thumbnail_filename)
 
     def __str__(self):
+        STR_SEPARATOR = app_config.STR_SEPARATOR
         return self.file_name + STR_SEPARATOR\
             + str(self.file_size) + STR_SEPARATOR\
             + self.metadata_image_format + STR_SEPARATOR\
@@ -191,31 +201,31 @@ class TeamImage:
             + list_to_str(self.warnings) + STR_SEPARATOR\
             + list_to_str(self.errors)
 
-    def get_metadata_from_image_file(self, image_path):
+    def get_metadata_from_image_file(self):
         """Populate Image metadata from file"""
         try:
-            image_file = Image.open(image_path)
+            image_file = Image.open(self.image_path)
             self.metadata_image_format = image_file.format
             self.metadata_image_width, self.metadata_image_height = image_file.size
             self.metadata_image_dpi = DEFAULT_DPI
             if image_file.info.get('dpi'):
                 x_dpi, y_dpi = image_file.info['dpi']
-                if x_dpi == y_dpi and x_dpi >= MIN_DPI:
+                if x_dpi == y_dpi and x_dpi >= app_config.MIN_DPI:
                     self.metadata_image_dpi = x_dpi
                 elif x_dpi == y_dpi and x_dpi > 0 and x_dpi < MIN_DPI:
                     self.errors.append('DPI: Image DPI is set too low: {0}'.format(x_dpi))
                 else:
                     self.warnings.append('DPI: Metadata DPI information is not consistent [x_dpi=' + str(x_dpi)
                                          + ', y_dpi = ' + str(y_dpi) + ']. Default value will be used.')
-                    if x_dpi > y_dpi and x_dpi >= DEFAULT_DPI:
+                    if x_dpi > y_dpi and x_dpi >= app_config.DEFAULT_DPI:
                         image_file.save(image_path, dpi=(x_dpi, x_dpi))
-                    elif y_dpi > x_dpi and y_dpi >= DEFAULT_DPI:
+                    elif y_dpi > x_dpi and y_dpi >= app_config.DEFAULT_DPI:
                         image_file.save(image_path, dpi=(y_dpi, y_dpi))
                     else:
-                        image_file.save(image_path, dpi=(DEFAULT_DPI, DEFAULT_DPI))
+                        image_file.save(image_path, dpi=(app_config.DEFAULT_DPI, app_config.DEFAULT_DPI))
             else:
                 self.warnings.append('DPI: Metadata does not contain DPI information. Default value will be used.')
-                image_file.save(image_path, dpi=(DEFAULT_DPI, DEFAULT_DPI))
+                image_file.save(image_path, dpi=(app_config.DEFAULT_DPI, app_config.DEFAULT_DPI))
         except Exception as ex:
             exc_type = ex.__class__.__name__
             self.errors.append("IMG: Unable to process image [" + self.file_name + "] Exception Type: " + str(exc_type) + " Error: " + str(ex))
@@ -223,14 +233,14 @@ class TeamImage:
             if image_file is not None:
                 image_file.close()
 
-    def create_thumbnail(self, image_path, thumbnail_path):
+    def create_thumbnail(self):
         """Create thumbnail(s) for provided image"""
         try:
-            image_file = Image.open(image_path)
+            image_file = Image.open(self.image_path)
             #for tile_height in THUMBNAIL_HEIGHT:
             #    for tile_format in THUMBNAIL_FORMAT:
-            thumbnail = resizeimage.resize_height(image_file, THUMBNAIL_HEIGHT)
-            thumbnail.save(thumbnail_path)
+            thumbnail = resizeimage.resize_height(image_file, app_config.THUMBNAIL_HEIGHT)
+            thumbnail.save(self.thumbnail_path)
         except Exception as ex:
             exc_type = ex.__class__.__name__
             self.errors.append("IMG: Unable to create thumbnail image [" + self.file_name
@@ -409,48 +419,6 @@ class TeamImage:
         possible_product_codes.sort(key=len, reverse=True)
         return possible_product_codes
 
-    def find_product_code_in_db(self, product_codes, strict_level):
-        rowcount = 0
-        for product_code in product_codes:
-            product_code_for_like = product_code.replace("'", "''").replace("%", "[%]").replace("_", "[_]")
-            sql = ""
-            #sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product]"
-            #sql = "SELECT [ID],[Guid],[Kod],[Nazwa],[NumerKatalogowy] FROM [TEAM].[dbo].[Towary] WHERE Kod LIKE '" + product_code_for_like + "%'"
-            if strict_level == 1:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] = '" + product_code.replace("'", "''") + "'"
-            elif strict_level == 2:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '" + product_code_for_like + "%'"
-            elif strict_level == 3:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '%" + product_code_for_like + "%'"
-            elif strict_level == 4:
-                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE REPLACE([product_code],'/','-') LIKE '%" + product_code_for_like + "%'"
-
-            SQL_CURSOR.execute(sql)
-            row = SQL_CURSOR.fetchone()
-            while row:
-                rowcount = rowcount + 1
-                if rowcount == 1:
-                    self.product_code_from_db = row[1].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding)
-                try:
-                    self.products_from_db.append(
-                        str(row[0])+'~"' + row[1]+'"~"'
-                        + row[2].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding).replace('"', '""')+'"')
-                except UnicodeDecodeError as ex:
-                    logging.error("Error occured while converting product description with code: '{0}'. Error description: '{1}'".format(row[1], repr(ex)))
-                #title.encode('utf-8', 'ignore').decode(sys.stdout.encoding)
-                #title = title.encode('utf8').decode('utf8')
-                #break
-                row = SQL_CURSOR.fetchone()
-            if rowcount > 1:
-                self.errors.append('SQL: More than one [' + str(rowcount) + '] product returned for the code: [' + product_code + ']')
-            '''
-            if rowcount >= 4:
-                self.product_code_from_db = ''
-                self.products_from_db.clear()
-                self.errors.append('SQL: Too many records [' + str(rowcount) + '] returned for the code: [' + product_code + ']')
-            '''
-        return rowcount
-
     def image_has_template(self, image_path, template_path):
         has_template = False
 
@@ -486,7 +454,7 @@ class TeamImage:
             (_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
 
             # check to see if the iteration should be visualized
-            if VISUALIZE:
+            if app_config.VISUALIZE:
                 # draw a bounding box around the detected region
                 clone = np.dstack([edged, edged, edged])
                 cv2.rectangle(clone, (maxLoc[0], maxLoc[1]),
@@ -509,7 +477,7 @@ class TeamImage:
             # draw a bounding box around the detected result and display the image
             #cv2.rectangle(image, (startX, startY), (endX, endY), (0, 0, 255), 2)
             #cv2.imshow("Image", image)
-            if found[0] >= CORRELATION_TRESHOLD:
+            if found[0] >= app_config.CORRELATION_TRESHOLD:
                 has_template = True
                 #print(found[0])
         #else:

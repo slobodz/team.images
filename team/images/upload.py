@@ -1,26 +1,17 @@
 """Parse and upload images"""
 import glob
 import os
-import re
 import sys
-from math import floor
-import cv2
-import imutils
-import numpy as np
-#import PIL.ExifTags
 import piexif
 import pyodbc
 import requests
-from PIL import Image
-from resizeimage import resizeimage
 from datetime import datetime
 import json
 import argparse
 from shutil import copy2, move
 
 from team.datasync.api.request import token_refresh
-from team.images import logging
-from team.images import app_config
+from team.images import logging, app_config
 from team.images.entity.model import TeamImage
 from team.images.service.utils import exif_tuple_2_str, \
     exif_str_2_tuple, list_to_str, rreplace, get_column_descriptions
@@ -37,6 +28,11 @@ TO DO:
 -Merge TeamImages with TeamAssets
 -Refactoring
 '''
+
+FILENAME_FILTER = None
+IMAGE_CURRENT_ERROR_FOLDER = None
+IMAGE_UNPROCESSED_ERROR_FOLDER = None
+SQL_CURSOR = None
 
 def process_exif(image_path):
     image_file = Image.open(image_path)
@@ -119,8 +115,8 @@ def check_folder_structure(process_id):
                 os.makedirs(app_config.IMAGE_ERROR_FOLDER)
             if not os.path.isdir(IMAGE_CURRENT_ERROR_FOLDER):    
                 os.makedirs(IMAGE_CURRENT_ERROR_FOLDER)
-            if not os.path.isdir(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER): 
-                os.makedirs(app_config.IMAGE_UNPROCESSED_ERROR_FOLDER)
+            if not os.path.isdir(IMAGE_UNPROCESSED_ERROR_FOLDER): 
+                os.makedirs(IMAGE_UNPROCESSED_ERROR_FOLDER)
             if not os.path.isdir(app_config.IMAGE_LOG_FOLDER):
                 os.makedirs(app_config.IMAGE_LOG_FOLDER)
             if not os.path.isdir(app_config.IMAGE_PROCESSED_FOLDER):
@@ -163,8 +159,55 @@ def check_folder_structure(process_id):
                 folders_ok = False
     return folders_ok
 
+    def find_product_code_in_db(team_image, strict_level):
+        global SQL_CURSOR
+        rowcount = 0
+        for product_code in team_image.product_codes:
+            product_code_for_like = product_code.replace("'", "''").replace("%", "[%]").replace("_", "[_]")
+            sql = ""
+            #sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product]"
+            #sql = "SELECT [ID],[Guid],[Kod],[Nazwa],[NumerKatalogowy] FROM [TEAM].[dbo].[Towary] WHERE Kod LIKE '" + product_code_for_like + "%'"
+            if strict_level == 1:
+                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] = '" + product_code.replace("'", "''") + "'"
+            elif strict_level == 2:
+                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '" + product_code_for_like + "%'"
+            elif strict_level == 3:
+                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE [product_code] LIKE '%" + product_code_for_like + "%'"
+            elif strict_level == 4:
+                sql = "SELECT [product_id],[product_code],[product_description] FROM [data].[product] WHERE REPLACE([product_code],'/','-') LIKE '%" + product_code_for_like + "%'"
+
+            SQL_CURSOR.execute(sql)
+            row = SQL_CURSOR.fetchone()
+            while row:
+                rowcount = rowcount + 1
+                if rowcount == 1:
+                    team_image.product_code_from_db = row[1].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding)
+                try:
+                    team_image.products_from_db.append(
+                        str(row[0])+'~"' + row[1]+'"~"'
+                        + row[2].lower().encode('utf-8', 'ignore').decode(sys.stdout.encoding).replace('"', '""')+'"')
+                except UnicodeDecodeError as ex:
+                    logging.error("Error occured while converting product description with code: '{0}'. Error description: '{1}'".format(row[1], repr(ex)))
+                #title.encode('utf-8', 'ignore').decode(sys.stdout.encoding)
+                #title = title.encode('utf8').decode('utf8')
+                #break
+                row = SQL_CURSOR.fetchone()
+            if rowcount > 1:
+                team_image.errors.append('SQL: More than one [' + str(rowcount) + '] product returned for the code: [' + product_code + ']')
+            '''
+            if rowcount >= 4:
+                self.product_code_from_db = ''
+                self.products_from_db.clear()
+                self.errors.append('SQL: Too many records [' + str(rowcount) + '] returned for the code: [' + product_code + ']')
+            '''
+        return rowcount
+
 #========================================================= SCRIPT =========================================================#
 def full_refresh():
+    global FILENAME_FILTER
+    global IMAGE_CURRENT_ERROR_FOLDER
+    global IMAGE_UNPROCESSED_ERROR_FOLDER
+
     process_id = datetime.now().strftime("%Y-%m-%d_%H.%M.%S.%f") #get process timestamp/id
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("-ll", "--loglevel", choices=['debug','info','warning','error','critical'], default='warning', required=False, help="Information type captured in log file")
@@ -204,16 +247,16 @@ def full_refresh():
         logging.critical("Unsupported system type: '{0}'".format(sys.platform))
         exit(1)
 
-    ConnectionString = app_config.SQL_CONNECTION_STRING_TEMPLATE.replace('%SQL_SERVER%', os.getenv('APP_SETTINGS_TEAM_SERVER'))
+    ConnectionString = app_config.SQL_CONNECTION_STRING_TEMPLATE.replace('%SQL_SERVER%', app_config.TEAM_SERVER)
     ConnectionString = ConnectionString.replace('%SQL_DRIVER%', sql_driver)
-    ConnectionString = ConnectionString.replace('%SQL_DATABASE%', os.getenv('APP_SETTINGS_TEAM_DATABASE'))
-    ConnectionString = ConnectionString.replace('%SQL_LOGIN%', os.getenv('APP_SETTINGS_TEAM_USER'))
-    ConnectionString = ConnectionString.replace('%SQL_PASSWORD%', os.getenv('APP_SETTINGS_TEAM_PWD'))
+    ConnectionString = ConnectionString.replace('%SQL_DATABASE%', app_config.TEAM_DATABASE)
+    ConnectionString = ConnectionString.replace('%SQL_LOGIN%', app_config.TEAM_USER)
+    ConnectionString = ConnectionString.replace('%SQL_PASSWORD%', app_config.TEAM_PWD)
     try:
         SQL_CONNECTION = pyodbc.connect(ConnectionString)
-        logging.info("Connected to server: '{0}'".format(os.getenv('APP_SETTINGS_TEAM_SERVER')))
+        logging.info("Connected to server: '{0}'".format(app_config.TEAM_SERVER))
     except Exception as ex:
-        logging.critical("Unable to connect to database server: '{0}'. Error: {1}".format(os.getenv('APP_SETTINGS_TEAM_SERVER'), repr(ex)))
+        logging.critical("Unable to connect to database server: '{0}'. Error: {1}".format(app_config.TEAM_SERVER, repr(ex)))
         exit(1)
 
     if SQL_CONNECTION is not None:
@@ -231,7 +274,9 @@ def full_refresh():
                     team_image = None
                     try:
                         logging.info("Processing file: '{0}'".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
-                        team_image = TeamImage(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), process_id)
+                        team_image = TeamImage(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), process_id, SQL_CURSOR)
+                        products_count = find_product_code_in_db(team_image, 1)
+                        team_image.preprocess_image(products_count)
                         logging.info(team_image)
                         #process_exif(os.path.join(IMAGE_FOLDER, filename))
                     except UnicodeEncodeError as ex:
@@ -239,7 +284,7 @@ def full_refresh():
                     except Exception as ex:
                         logging.error("Exception captured while processing file: '{0}' Message: {1}".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename), repr(ex)))
 
-                    if UPLOAD_FILES == False:
+                    if app_config.UPLOAD_FILES == False:
                         logging.warning("Process is set NOT to upload images. UPLOAD_FILES variable is expected to be True.")
                     elif team_image is None:
                         logging.error("File: '{0}' was not processed correctly.".format(os.path.join(app_config.IMAGE_UNPROCESSED_FOLDER, filename)))
