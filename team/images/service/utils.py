@@ -1,6 +1,17 @@
 # team.images.utils.py
 from team.images import app_config
 
+def list_to_str(lst):
+    '''Creates string from string list separated using default separator'''
+    list_as_string = ''
+    if isinstance(lst, str) is False:
+        for iterator in range(0, len(lst)):
+            if iterator == 0:
+                list_as_string = str(lst[iterator])
+            else:
+                list_as_string = list_as_string + app_config.LIST_SEPARATOR + str(lst[iterator])
+    return list_as_string
+
 def get_column_descriptions():
     STR_SEPARATOR = app_config.STR_SEPARATOR
       
@@ -29,17 +40,6 @@ def get_column_descriptions():
 def rreplace(given_string, old, new, occurrence):
     split_list = given_string.rsplit(old, occurrence)
     return new.join(split_list)
-
-def list_to_str(lst):
-    '''Creates string from string list separated using default separator'''
-    list_as_string = ''
-    if isinstance(lst, str) is False:
-        for iterator in range(0, len(lst)):
-            if iterator == 0:
-                list_as_string = str(lst[iterator])
-            else:
-                list_as_string = list_as_string + LIST_SEPARATOR + str(lst[iterator])
-    return list_as_string
 
 def exif_str_2_tuple(input_string):
     converted_list = list()

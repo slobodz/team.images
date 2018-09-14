@@ -13,8 +13,8 @@ from shutil import copy2, move
 from team.datasync.api.request import token_refresh
 from team.images import logging, app_config
 from team.images.entity.model import TeamImage
-from team.images.service.utils import exif_tuple_2_str, \
-    exif_str_2_tuple, list_to_str, rreplace, get_column_descriptions
+from team.images.service.utils import list_to_str, exif_tuple_2_str, \
+    exif_str_2_tuple, rreplace, get_column_descriptions
 
 
 '''

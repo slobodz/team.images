@@ -26,8 +26,8 @@ class Config:
     THUMBNAIL_FORMAT = 'PNG'
 
     SQL_CONNECTION_STRING_TEMPLATE = 'Driver=%SQL_DRIVER%;Server=%SQL_SERVER%;Database=%SQL_DATABASE%;Uid=%SQL_LOGIN%;Pwd=%SQL_PASSWORD%;'
-    SQL_CONNECTION = None
-    SQL_CURSOR = None
+    ROOT_DIR = os.path.dirname(os.path.abspath(__file__)) # This is your Project Root  
+    IMAGE_TEMPLATE_FOLDER = os.path.join(ROOT_DIR, 'templates')       
 
 class DevelopmentConfig(Config):
     """Development configuration."""
@@ -45,7 +45,7 @@ class DevelopmentConfig(Config):
     IMAGE_PROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'processed')
     IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
     IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
-    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')    
+    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')
 
 class TestConfig(Config):
     """Development slawek configuration."""
@@ -63,7 +63,7 @@ class TestConfig(Config):
     IMAGE_PROCESSED_FOLDER = os.path.join(PARENT_FOLDER, 'processed')
     IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
     IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
-    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')    
+    IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')     
 
 class ProductionConfig(Config):
     """Development slawek configuration."""
@@ -82,6 +82,5 @@ class ProductionConfig(Config):
     IMAGE_ERROR_FOLDER = os.path.join(PARENT_FOLDER, 'errors')
     IMAGE_THUMBNAIL_FOLDER = os.path.join(PARENT_FOLDER, 'thumbnails')
     IMAGE_LOG_FOLDER = os.path.join(PARENT_FOLDER, 'logs')    
-
     
 

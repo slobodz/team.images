@@ -16,6 +16,9 @@ elif app_settings == 'prod':
 else:
     raise ValueError('Invalid environment name')
 
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__)) # This is your Project Root    
+setattr(app_config, ROOT_DIR, ROOT_DIR)
+
 #logging
 LOG_LOCATION = app_config.LOG_LOCATION
 logging.basicConfig(filename=os.path.join(LOG_LOCATION, 'imagerefresh' + datetime.datetime.today().strftime('%Y%m%d%H%M%S') + '.log'), format='%(asctime)s %(message)s', level=logging.DEBUG)

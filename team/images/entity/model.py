@@ -8,6 +8,7 @@ from resizeimage import resizeimage
 from PIL import Image
 
 from team.images import logging, app_config
+from team.images.service.utils import list_to_str
 
 class TeamImage:
     """Class to hold all Team Image data"""
@@ -76,7 +77,7 @@ class TeamImage:
         if app_config.PROCESS_TEMPLATES:
             for template in app_config.TEMPLATES:
                 correlation = 0.0
-                correlation = self.image_has_template(self.file_path, template)
+                correlation = self.image_has_template(self.file_path, os.path.join(app_config.IMAGE_TEMPLATE_FOLDER, template))
                 #print('Correlation: {0} for template: {1}'.format(correlation, template))
                 if correlation >= app_config.CORRELATION_TRESHOLD:
                     #print('Correlation: {0} for template: {1}'.format(correlation, template))
@@ -178,6 +179,7 @@ class TeamImage:
         return (new_filename, new_thumbnail_filename)
 
     def __str__(self):
+
         STR_SEPARATOR = app_config.STR_SEPARATOR
         return self.file_name + STR_SEPARATOR\
             + str(self.file_size) + STR_SEPARATOR\
@@ -207,7 +209,7 @@ class TeamImage:
             image_file = Image.open(self.file_path)
             self.metadata_image_format = image_file.format
             self.metadata_image_width, self.metadata_image_height = image_file.size
-            self.metadata_image_dpi = DEFAULT_DPI
+            self.metadata_image_dpi = app_config.DEFAULT_DPI
             if image_file.info.get('dpi'):
                 x_dpi, y_dpi = image_file.info['dpi']
                 if x_dpi == y_dpi and x_dpi >= app_config.MIN_DPI:
