@@ -22,6 +22,8 @@ version_line = list(
 )[0]
 
 def get_version(version_tuple):
+    build = (0,) if not os.getenv('TRAVIS_BUILD_NUMBER') else (int(os.getenv('TRAVIS_BUILD_NUMBER')),)
+    version_tuple += build    
     if not isinstance(version_tuple[-1], int):
         return '.'.join(
             map(str, version_tuple[:-1])

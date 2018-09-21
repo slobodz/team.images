@@ -9,3 +9,9 @@ before_script:
   - export APP_SETTINGS_IMAGESYNC=test 
 
 script: nosetests -v
+
+deploy:
+      provider: pypi
+      user: team
+      password: team
+      server: https://teampypi.herokuapp.com/
