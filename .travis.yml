@@ -4,7 +4,7 @@ language: python
 python:
   - "3.6"
 install:
-  - pip install --extra-index-url https://teampypi.herokuapp.com/packages/ team.datasync
+  - pip install --extra-index-url https://teampypi.herokuapp.com/ team.datasync
   - pip install -r requirements.txt
 before_script:
   - export DEBUG=1
