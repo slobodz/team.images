@@ -7,3 +7,4 @@ piexif
 Pillow
 python-resize-image
 nose
+team.datasync
