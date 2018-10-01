@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_namespace_packages
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
@@ -37,14 +37,15 @@ setup(
     name = "team.images",
     version = get_version(VERSION_TUPLE),
     author = "Wojtek Jakubas",
-    author_email = "@gmail.com",
+    author_email = "build.teamexport@gmail.com",
     description = ("Images push to TeamServices module"),
     scripts=['bin/run-team.images.py'],    
     license = "BSD",
     keywords = "example documentation tutorial",
     url = "http://packages.python.org/team.datasync",
     install_requires=reqs('requirements.txt'),
-    packages=['team.images','team.images.entity','team.images.service','team.images.templates'],
+    packages=find_namespace_packages(include=['team.*']),#['team.images','team.images.entity','team.images.service','team.images.templates'],
+    dependency_links=['https://teampypi.herokuapp.com/packages/'],    
     namespace_packages=['team'],
     long_description=read('README.md'),
     classifiers=[
