@@ -3,7 +3,9 @@ sudo: false  # http://docs.travis-ci.com/user/migrating-from-legacy/
 language: python
 python:
   - "3.6"
-install: pip install -r requirements.txt
+install:
+  - pip install --extra-index-url https://teampypi.herokuapp.com/packages/ team.images
+  - pip install -r requirements.txt
 before_script:
   - export DEBUG=1
   - export APP_SETTINGS_IMAGESYNC=test 
