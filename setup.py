@@ -44,9 +44,9 @@ setup(
     keywords = "example documentation tutorial",
     url = "http://packages.python.org/team.datasync",
     install_requires=reqs('requirements.txt'),
-    packages=find_namespace_packages(include=['team.*']),#['team.images','team.images.entity','team.images.service','team.images.templates'],
-    dependency_links=['https://teampypi.herokuapp.com/packages/'],    
-    namespace_packages=['team'],
+    packages=find_namespace_packages(include=['team', 'team.*']),#['team.images','team.images.entity','team.images.service','team.images.templates'],
+    dependency_links=['https://teampypi.herokuapp.com/'],    
+    #namespace_packages=['team'],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
