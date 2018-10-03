@@ -45,7 +45,7 @@ setup(
     url = "http://packages.python.org/team.datasync",
     install_requires=reqs('requirements.txt'),
     packages=find_namespace_packages(include=['team', 'team.*']),
-    dependency_links=['https://teampypi.herokuapp.com/'],    
+    dependency_links=['https://teampypi.herokuapp.com/packages/'],    
     #namespace_packages=['team'],
     long_description=read('README.md'),
     classifiers=[
