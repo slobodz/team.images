@@ -8,6 +8,8 @@ install:
 before_script:
   - export DEBUG=1
   - export APP_SETTINGS_IMAGESYNC=test 
+  - python -m pip install --upgrade pip
+  - python -m pip install --upgrade setuptools wheel
 
 script: nosetests -v
 
