@@ -4,8 +4,8 @@ language: python
 python:
   - "3.6"
 install:
-  - pip install --extra-index-url https://teampypi.herokuapp.com/ team.datasync
   - pip install -r requirements.txt
+  - python setup.py -q install
 before_script:
   - export DEBUG=1
   - export APP_SETTINGS_IMAGESYNC=test 
