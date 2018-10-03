@@ -3,14 +3,15 @@ sudo: false  # http://docs.travis-ci.com/user/migrating-from-legacy/
 language: python
 python:
   - "3.6"
+before_install:
+  - python -m pip install --upgrade pip
+  - python -m pip install --upgrade setuptools wheel
 install:
   - python setup.py -q install
+
 before_script:
   - export DEBUG=1
   - export APP_SETTINGS_IMAGESYNC=test 
-  - python -m pip install --upgrade pip
-  - python -m pip install --upgrade setuptools wheel
-
 script: nosetests -v
 
 deploy:
